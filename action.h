@@ -90,6 +90,7 @@ public:
 		}
 		return in;
 	}
+	int x, y, who;
 protected:
 	action& reinterpret(const action* a) const { return *new (const_cast<action*>(a)) place(*a); }
 	static __attribute__((constructor)) void init() { entries()[type_flag('p')] = new place; }

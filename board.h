@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <utility>
 #include <cmath>
+#include <vector>
+// #include "action.h"
 
 /**
  * definition for the 9x9 board
@@ -98,6 +100,32 @@ public:
 	bool operator >=(const board& b) const { return !(*this < b); }
 
 public:
+
+	const std::vector<point> get_legal_pts( size_t who = -1 ) {
+		//get all possible actions
+		std::vector<point> points;
+		for (size_t i = 0; i < size_x * size_y ; i++){
+			board after(*this);
+			point p(i/size_x, i%size_y);
+			auto result = after.place(p, who);
+			if ( result == nogo_move_result::legal ){
+				points.emplace_back(p);
+			}
+			// else{
+			// 	std::cout<<"illegal move"<<result<<std::endl;
+			// }
+		}
+		return points;
+	}
+
+	const point get_random_legal_pt( size_t who = -1 ){
+		std::vector<point> points= get_legal_pts( who );
+		if( points.size() == 0 ){
+			return point();
+		}
+		return points[ rand() % points.size() ];
+	}
+
 	enum nogo_move_result {
 		legal = reward(0),
 		illegal_turn = reward(-1),

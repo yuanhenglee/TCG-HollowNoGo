@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <fstream>
+#include <assert.h>
 #include "board.h"
 #include "action.h"
 
@@ -116,13 +117,11 @@ public:
 		double best_score = -1;
 		for (auto& child : children) {
 			// selection with standard UCB
-			double score;
-			if (child->visits != 0) 
-				score = child->wins / child->visits + sqrt(2 * log(visits) / child->visits);
-			else// prevent divide by zero
-				score = 1e9;
+			if (child->visits == 0) 
+				return child;
 
-			if (score > best_score) {
+			double score = child->wins / child->visits + sqrt(2 * log(visits) / child->visits);
+			if (score - best_score > 0.0001) {
 				best_child = child;
 				best_score = score;
 			}
@@ -131,18 +130,20 @@ public:
 	}
 
 	bool expand(const board& state) {
+		// std::cout<<"expanding "<<pos<<std::endl;
 
 		// expand the node if it is not a leaf
-		if( visits == 0 || is_leaf ) return false;
+		if( is_leaf ) return false;
 		
-		board after = board(state);
 
 		// if the node is expanded, skip the expansion process
 		if( is_expanded )
 			return true;
 
+		board after = board(state);
+
 		// get all possible actions
-		std::vector<board::point> points = after.get_legal_pts( 3u-who ); 
+		std::vector<board::point> points = after.get_legal_pts(); 
 
 		// std::cout<<"points.size() : "<<points.size()<<std::endl;
 		// return false if there is no possible action
@@ -154,13 +155,8 @@ public:
 		// expand children
 		for (auto& point : points) {
 			Node* child = new Node( this, 3u-who, point);
+			// std::cout<<"child:"<<child->pos<<", parent: "<<child->parent->pos<<std::endl;
 			children.emplace_back(child);
-		}
-
-		// update parent's expanded count
-		if( parent != nullptr ){
-			std::cout<<"expand:"<<pos<<", parent: "<<parent->pos<<std::endl;
-			parent->expanded_count++;
 		}
 		
 		// update expanded status
@@ -169,39 +165,41 @@ public:
 		return true;
 	}
 
-	Node* treePolicy(board& state) {
-		Node* cur = this;
-		//selection
-		// std::cout<<"children size : "<<cur->children.size()<<" expanded_count : "<<cur->expanded_count<<std::endl;
-		while (cur->children.size() > 0 ) {
-			cur = cur->getBestChild();
-			// std::cout<<"children size : "<<cur->children.size()<<" expanded_count : "<<cur->expanded_count<<std::endl;
+	Node* traverse( board& state ) {
+		Node* node = this;
+		while( node->is_fully_expanded() ){
+			node = node->getBestChild();
+			state.place(node->pos);
 		}
-		// std::cout<<"select node : "<<cur->pos.x<<","<<cur->pos.y<<std::endl;
+		return node;
+	}
+
+	Node* treePolicy(board& state) {
+		//selection
+		Node* cur = this->traverse(state);
 
 		//expansion
-		if (cur->expand(state)) {
+		if(cur->expand(state)){
+			cur->expanded_count++;
 			cur = cur->getBestChild();
+			state.place( cur->pos );
+			return cur;
 		}
-		state.place( cur->pos, cur->who );
-		// std::cout<<"expand node : "<<cur->pos.x<<","<<cur->pos.y<<std::endl;
-
+		// std::cout<<"expand failed"<<std::endl;
 		return cur;
 	}
 
 	size_t defaultPolicy( const board& state ) {
 		board after  = board(state);
-		size_t cur_who = who;
+		size_t cur_who = 3u-who;
 		while ( true ) {
 			// std::cout<<state<<std::endl;
 			board::point point = after.get_random_legal_pt( );
 			// std::cout<<"default policy : "<<point.x<<","<<point.y<<std::endl;
-			if( point.x == -1 && point.y == -1 ) break;
-			after.place( point.x, point.y, cur_who );
+			if( point.x == -1 && point.y == -1 ) return 3u-cur_who;
+			after.place( point.x, point.y );
 			cur_who = 3u-cur_who;
 		}
-		//return the winner
-		return 3u-cur_who;
 	}
 	
 
@@ -215,8 +213,11 @@ public:
 		}
 	}
 
+	bool is_fully_expanded() const {
+		return is_expanded && expanded_count == children.size();
+	}
 
-	Node* parent;
+	Node* parent = nullptr;
 	int visits = 0;
 	int wins = 0;
 	long unsigned int expanded_count = 0;
@@ -241,21 +242,21 @@ class mcts_player : public random_agent {
         if (role() == "white") who = board::white;
         if (who == board::empty)
             throw std::invalid_argument("invalid role: " + role());
+		if (meta.find("T") != meta.end())
+			T = int(meta["T"]);
     }
 	
 	// just for test
 	void print_tree( Node* root, int depth ){
 		if( root == nullptr ) return;
-		for( int i = 0; i < depth; i++ ) std::cout<<" ";
-		std::cout<<root->pos.x<<","<<root->pos.y<<" "<<root->visits<<" "<<root->wins<<std::endl;
+		for( int i = 0; i < depth; i++ ) std::cout<<"  ";
+		std::cout<<root->pos<<"\t"<<root->wins<<"/"<<root->visits<<"\t"<<root->expanded_count<<"/"<<root->children.size()<<std::endl;
 		for( auto& child : root->children ){
 			print_tree( child, depth+1 );
 		}
 	}
 
     virtual action take_action(const board& state) {
-
-		int T = 1000;
 		
 		// std::cout<<state<<std::endl;
 		
@@ -271,21 +272,33 @@ class mcts_player : public random_agent {
 
 			// random run to add node and get reward
 			size_t winner = expand_node->defaultPolicy( after );
-			// std::cout<<"winner : "<<winner<<std::endl;
 
 			// update all passing nodes with reward
 			expand_node->backPropagate( winner );
 
+			// print_tree(root, 0);
 		}
-		// std::cout<<"-----------------"<<std::endl;
-		// print_tree(root, 0);
+
+
 		// get the best child
 		Node* best_child = root->getBestChild();
+
+		// for test
+		std::cout<<"-----------------"<<std::endl;
+		std::cout<<state<<std::endl;
+		print_tree(root, 0);
+		if( best_child == nullptr ){
+			std::cout<<"best child is null"<<std::endl;
+		}
+		else{
+			std::cout<<"best child : "<<best_child->pos.x<<","<<best_child->pos.y<<std::endl;
+		}
 
 		// return action() if best child is null
 		if( best_child == nullptr ) return action();
 
 		action::place move = action::place(best_child->pos.x, best_child->pos.y, who);
+
 
         return move;
     }
@@ -293,5 +306,6 @@ class mcts_player : public random_agent {
    private:
     // std::vector<action::place> space;
     board::piece_type who;
+	int T;
 };
 

@@ -113,27 +113,44 @@ public:
 	const Node* get_parent() const { return parent; };
 
 	Node* getBestChild() {
-		Node* best_child = nullptr;
-		double best_score = -1;
+		// Node* best_child = nullptr;
+		std::vector<double> scores;
+		// init best_score as the minimum double value
+		double best_score = std::numeric_limits<double>::lowest();
 		for (auto& child : children) {
+			double score;
 			// selection with standard UCB
 			if (child->visits == 0) 
-				return child;
-
-			double score = child->wins / child->visits + sqrt(2 * log(visits) / child->visits);
-			if (score - best_score > 0.0001) {
-				best_child = child;
+			 	score = std::numeric_limits<double>::max();
+				// return child;
+			else
+				score = child->wins / child->visits + sqrt(2 * log2(visits) / child->visits);
+			
+			scores.emplace_back(score);
+			if (score > best_score ) {
+				// best_child = child;
 				best_score = score;
 			}
+
+
 		}
-		return best_child;
+		// TRY: randomly select from the best children
+		std::vector<Node*> best_children;
+		for( size_t i = 0; i < scores.size(); i++ ) {
+			if ( best_score - scores[i] < 1e-6 ) {
+				best_children.emplace_back(children[i]);
+			}
+		}
+
+		// return best_child;
+		return best_children[rand() % best_children.size()];
 	}
 
 	bool expand(const board& state) {
 		// std::cout<<"expanding "<<pos<<std::endl;
 
 		// expand the node if it is not a leaf
-		if( is_leaf ) return false;
+		if( visits == 0 || is_leaf ) return false;
 		
 
 		// if the node is expanded, skip the expansion process
@@ -158,6 +175,9 @@ public:
 			// std::cout<<"child:"<<child->pos<<", parent: "<<child->parent->pos<<std::endl;
 			children.emplace_back(child);
 		}
+
+		// shuffle children vector index
+		std::shuffle(children.begin(), children.end(), std::default_random_engine());
 		
 		// update expanded status
 		is_expanded = true;
@@ -167,7 +187,8 @@ public:
 
 	Node* traverse( board& state ) {
 		Node* node = this;
-		while( node->is_fully_expanded() ){
+		while( node->children.size() > 0 ){
+		// while( node->is_fully_expanded() ){
 			node = node->getBestChild();
 			state.place(node->pos);
 		}
@@ -180,10 +201,9 @@ public:
 
 		//expansion
 		if(cur->expand(state)){
-			cur->expanded_count++;
+			// cur->expanded_count++;
 			cur = cur->getBestChild();
 			state.place( cur->pos );
-			return cur;
 		}
 		// std::cout<<"expand failed"<<std::endl;
 		return cur;
@@ -208,7 +228,7 @@ public:
 		Node* node = this;
 		while (node != nullptr) {
 			node->visits++;
-			node->wins += static_cast<size_t>(winner == node->who);
+			node->wins += winner == node->who? 1 : 0;
 			node = node->parent;
 		}
 	}
@@ -244,13 +264,15 @@ class mcts_player : public random_agent {
             throw std::invalid_argument("invalid role: " + role());
 		if (meta.find("T") != meta.end())
 			T = int(meta["T"]);
+		if (meta.find("debug") != meta.end())
+			debug = bool(meta["debug"]);
     }
 	
 	// just for test
 	void print_tree( Node* root, int depth ){
-		if( root == nullptr ) return;
+		if( root == nullptr || depth > 2 ) return;
 		for( int i = 0; i < depth; i++ ) std::cout<<"  ";
-		std::cout<<root->pos<<"\t"<<root->wins<<"/"<<root->visits<<"\t"<<root->expanded_count<<"/"<<root->children.size()<<std::endl;
+		std::cout<<(root->who==1?"B:":"W:")<<root->pos<<"\t"<<root->wins<<"/"<<root->visits<<"\t"<<root->expanded_count<<"/"<<root->children.size()<<std::endl;
 		for( auto& child : root->children ){
 			print_tree( child, depth+1 );
 		}
@@ -266,9 +288,7 @@ class mcts_player : public random_agent {
 			board after = board(state);
 
 			// find the best node to expand
-			root->expand(after);
 			Node* expand_node = root->treePolicy( after );
-			// std::cout<<expand_node->pos.x<<" "<<expand_node->pos.y<<std::endl;
 
 			// random run to add node and get reward
 			size_t winner = expand_node->defaultPolicy( after );
@@ -276,36 +296,38 @@ class mcts_player : public random_agent {
 			// update all passing nodes with reward
 			expand_node->backPropagate( winner );
 
-			// print_tree(root, 0);
 		}
 
 
 		// get the best child
-		Node* best_child = root->getBestChild();
+		// Node* best_child = root->getBestChild();
+		Node* best_child = nullptr;
+		for( auto& child : root->children ){
+			if( best_child == nullptr || child->visits > best_child->visits ){
+				best_child = child;
+			}
+		}
 
-		// for test
-		std::cout<<"-----------------"<<std::endl;
-		std::cout<<state<<std::endl;
-		print_tree(root, 0);
+		if( debug ){
+			// for test
+			std::cout<<"-----------------"<<std::endl;
+			std::cout<<state<<std::endl;
+			print_tree(root, 0);
+		}
+
 		if( best_child == nullptr ){
-			std::cout<<"best child is null"<<std::endl;
-		}
-		else{
-			std::cout<<"best child : "<<best_child->pos.x<<","<<best_child->pos.y<<std::endl;
+			if( debug ) std::cout<<"best child is null"<<std::endl;
+			return action();
 		}
 
-		// return action() if best child is null
-		if( best_child == nullptr ) return action();
-
-		action::place move = action::place(best_child->pos.x, best_child->pos.y, who);
-
-
-        return move;
+		if( debug ) std::cout<<"best child : "<<best_child->pos<<std::endl;
+		return action::place(best_child->pos.x, best_child->pos.y, who);
     }
 
    private:
     // std::vector<action::place> space;
     board::piece_type who;
-	int T;
+	int T = 500;
+	bool debug = false;
 };
 

@@ -240,6 +240,8 @@ class player : public random_agent {
 			method = "mcts";
 			if (meta.find("T") != meta.end())
 				T = int(meta["T"]);
+			if (meta.find("time") != meta.end())
+				t_limit = int(meta["time"]);
 			if (meta.find("debug") != meta.end())
 				debug = bool(meta["debug"]);
 		}
@@ -279,7 +281,7 @@ class player : public random_agent {
 
     action mcts_action(const board& state) {
 		
-		const auto time_limit = std::chrono::milliseconds(1400);
+		const auto time_limit = std::chrono::milliseconds(t_limit);
 		const auto start_time = std::chrono::high_resolution_clock::now();
 		
 		Node* root = new Node( 3u-who, board::point(-1, -1) );
@@ -336,7 +338,7 @@ class player : public random_agent {
     std::vector<action::place> space;
 	std::string method = "random";
     board::piece_type who;
-	int T = 500;
+	int T = 10000, t_limit = 1300;
 	bool debug = false;
 };
 

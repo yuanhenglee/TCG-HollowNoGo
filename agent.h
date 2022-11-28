@@ -80,31 +80,42 @@ public:
 	const Node* get_parent() const { return parent; };
 
 	Node* getBestChild() {
-		std::vector<double> scores;
+		// std::vector<double> scores;
+		Node* bestChild = nullptr;
+		double max_score = -1;
 		double log2visits = log2( visits );
 		for (auto& child : children) {
 			// selection with standard UCB
-			if (child->visits == 0) 
+			if (child->visits == 0){
 			 	child->ucb = std::numeric_limits<double>::max();
-			else
-				child->ucb = child->wins / child->visits + 0.2 * sqrt(log2visits / child->visits);
-			
-			scores.emplace_back(child->ucb);
-		}
-		// find the best score
-		double best_score = *std::max_element(scores.begin(), scores.end());
-
-		// TRY: randomly select from the best children
-		std::vector<Node*> best_children;
-		// for( size_t i = 0; i < scores.size(); i++ ) {
-		for( auto& child : children) {
-			if ( best_score - child->ucb < 1e-6 ) {
-				best_children.emplace_back(child);
+				return child;
 			}
-		}
+			else{
+				child->ucb = child->wins / child->visits + 0.25 * sqrt(log2visits / child->visits);
+			}
 
-		// return best_child;
-		return best_children[rand() % best_children.size()];
+			if( child->ucb > max_score ){
+				max_score = child->ucb;
+				bestChild = child;
+			}
+			
+			// scores.emplace_back(child->ucb);
+		}
+		return bestChild;
+		// // find the best score
+		// double best_score = *std::max_element(scores.begin(), scores.end());
+
+		// // TRY: randomly select from the best children
+		// std::vector<Node*> best_children;
+		// // for( size_t i = 0; i < scores.size(); i++ ) {
+		// for( auto& child : children) {
+		// 	if ( best_score - child->ucb < 1e-6 ) {
+		// 		best_children.emplace_back(child);
+		// 	}
+		// }
+
+		// // return best_child;
+		// return best_children[rand() % best_children.size()];
 	}
 
 	bool expand(const board& state) {
@@ -268,7 +279,7 @@ class player : public random_agent {
 
     action mcts_action(const board& state) {
 		
-		const auto time_limit = std::chrono::milliseconds(1200);
+		const auto time_limit = std::chrono::milliseconds(1400);
 		const auto start_time = std::chrono::high_resolution_clock::now();
 		
 		Node* root = new Node( 3u-who, board::point(-1, -1) );

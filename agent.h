@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <fstream>
 #include <assert.h>
+#include <chrono>
 #include "board.h"
 #include "action.h"
 
@@ -66,40 +67,6 @@ public:
 protected:
 	std::default_random_engine engine;
 };
-
-/**
- * random player for both side
- * put a legal piece randomly
- */
-// class player : public random_agent {
-// public:
-// 	player(const std::string& args = "") : random_agent("name=random role=unknown " + args),
-// 		space(board::size_x * board::size_y), who(board::empty) {
-// 		if (name().find_first_of("[]():; ") != std::string::npos)
-// 			throw std::invalid_argument("invalid name: " + name());
-// 		if (role() == "black") who = board::black;
-// 		if (role() == "white") who = board::white;
-// 		if (who == board::empty)
-// 			throw std::invalid_argument("invalid role: " + role());
-// 		for (size_t i = 0; i < space.size(); i++)
-// 			space[i] = action::place(i, who);
-// 	}
-
-// 	virtual action take_action(const board& state) {
-// 		std::shuffle(space.begin(), space.end(), engine);
-// 		for (const action::place& move : space) {
-// 			board after = state;
-// 			if (move.apply(after) == board::legal)
-// 				return move;
-// 		}
-// 		return action();
-// 	}
-
-// private:
-// 	std::vector<action::place> space;
-// 	board::piece_type who;
-// };
-
 
 class Node {
 public:
@@ -301,7 +268,8 @@ class player : public random_agent {
 
     action mcts_action(const board& state) {
 		
-		// std::cout<<state<<std::endl;
+		const auto time_limit = std::chrono::milliseconds(1200);
+		const auto start_time = std::chrono::high_resolution_clock::now();
 		
 		Node* root = new Node( 3u-who, board::point(-1, -1) );
 		for( int i = 0; i < T ; i++ ) {
@@ -316,6 +284,12 @@ class player : public random_agent {
 
 			// update all passing nodes with reward
 			expand_node->backPropagate( winner );
+
+			if( i > 0.2*T && std::chrono::high_resolution_clock::now() - start_time > time_limit ){
+				if( debug )
+					std::cout<<"time limit reached i = "<<i<<std::endl;
+				break;
+			}
 
 		}
 

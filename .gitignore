@@ -1,3 +1,5 @@
+*.mon
+nogo
 .vscode/*
 gogui-twogtp-*/*
 log

@@ -173,11 +173,9 @@ public:
 
 		//expansion
 		if(cur->expand(state)){
-			// cur->expanded_count++;
 			cur = cur->getBestChild();
 			assert(state.place( cur->pos ) == board::legal);
 		}
-		// std::cout<<"expand failed"<<std::endl;
 		return cur;
 	}
 
@@ -306,9 +304,7 @@ class player : public random_agent {
 
 		}
 
-
 		// get the best child
-		// Node* best_child = root->getBestChild();
 		Node* best_child = nullptr;
 		for( auto& child : root->children ){
 			if( best_child == nullptr || child->visits > best_child->visits ){

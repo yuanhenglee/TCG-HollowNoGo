@@ -120,7 +120,7 @@ public:
 
 	const point get_random_legal_pt( size_t who = -1 ){
 		std::vector<point> points= get_legal_pts( who );
-		if( points.size() == 0 ){
+		if( points.empty() ){
 			return point();
 		}
 		return points[ rand() % points.size() ];

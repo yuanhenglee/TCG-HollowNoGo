@@ -119,11 +119,25 @@ public:
 	}
 
 	const point get_random_legal_pt( size_t who = -1 ){
-		std::vector<point> points= get_legal_pts( who );
-		if( points.empty() ){
-			return point();
+		// generate all possible index and shuffle
+		std::vector<int> indices;
+		for( int i = 0 ; i < size_x * size_y ; i++ ) indices.emplace_back(i);
+		std::random_shuffle(indices.begin(), indices.end());
+		// find the first legal move
+		for( int i = 0 ; i < size_x * size_y ; i++ ){
+			board after(*this);
+			point p(indices[i]/size_x, indices[i]%size_y);
+			auto result = after.place(p, who);
+			if ( result == nogo_move_result::legal ){
+				return p;
+			}
 		}
-		return points[ rand() % points.size() ];
+		return point(-1);
+		// std::vector<point> points= get_legal_pts( who );
+		// if( points.empty() ){
+		// 	return point();
+		// }
+		// return points[ rand() % points.size() ];
 	}
 
 	enum nogo_move_result {

@@ -296,7 +296,7 @@ class player : public random_agent {
 			// update all passing nodes with reward
 			expand_node->backPropagate( winner );
 
-			if( i > 0.2*T && std::chrono::high_resolution_clock::now() - start_time > time_limit ){
+			if( i > 0.2*T && i%100 == 0 && std::chrono::high_resolution_clock::now() - start_time > time_limit ){
 				if( debug )
 					std::cout<<"time limit reached i = "<<i<<std::endl;
 				break;
@@ -334,7 +334,7 @@ class player : public random_agent {
     std::vector<action::place> space;
 	std::string method = "random";
     board::piece_type who;
-	int T = 10000, t_limit = 1300;
+	int T = 12000, t_limit = 40000;
 	bool debug = false;
 };
 

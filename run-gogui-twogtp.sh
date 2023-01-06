@@ -6,11 +6,13 @@ P1W='./nogo --shell --name="Hollow-White" --white="mcts T=22000 time=1200"'
 # commands for local player 2
 # P2B='./nogo-judge --shell --name="Judge-Weak-Black" --black="weak"'
 # P2W='./nogo-judge --shell --name="Judge-Weak-White" --white="weak"'
-P2B='./nogo-judge --shell --name="Judge-Strong-Black" --black="strong"'
-P2W='./nogo-judge --shell --name="Judge-Strong-White" --white="strong"'
+# P2B='./nogo-judge --shell --name="Judge-Strong-Black" --black="strong"'
+# P2W='./nogo-judge --shell --name="Judge-Strong-White" --white="strong"'
 # commands for remote player 2
-#P2B="gogui-client tcglinux1 10000"
-#P2W="gogui-client tcglinux1 10000"
+# P2B="gogui-client tcglinux1 10000"
+# P2W="gogui-client tcglinux1 10000"
+P2B="gogui-client 104.113.179.238:10000"
+P2W="gogui-client 104.113.179.238:10000"
 
 # other settings
 games=${1:-10} # total games to play

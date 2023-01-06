@@ -99,23 +99,8 @@ public:
 				bestChild = child;
 			}
 			
-			// scores.emplace_back(child->ucb);
 		}
 		return bestChild;
-		// // find the best score
-		// double best_score = *std::max_element(scores.begin(), scores.end());
-
-		// // TRY: randomly select from the best children
-		// std::vector<Node*> best_children;
-		// // for( size_t i = 0; i < scores.size(); i++ ) {
-		// for( auto& child : children) {
-		// 	if ( best_score - child->ucb < 1e-6 ) {
-		// 		best_children.emplace_back(child);
-		// 	}
-		// }
-
-		// // return best_child;
-		// return best_children[rand() % best_children.size()];
 	}
 
 	bool expand(const board& state) {
@@ -203,9 +188,6 @@ public:
 		}
 	}
 
-	// bool is_fully_expanded() const {
-	// 	return is_expanded && expanded_count == children.size();
-	// }
 
 	Node* parent = nullptr;
 	double visits = 0;

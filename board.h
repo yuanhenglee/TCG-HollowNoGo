@@ -16,6 +16,7 @@
 #include <utility>
 #include <cmath>
 #include <vector>
+#include <bitset>
 // #include "action.h"
 
 /**
@@ -111,9 +112,6 @@ public:
 			if ( result == nogo_move_result::legal ){
 				points.emplace_back(p);
 			}
-			// else{
-			// 	std::cout<<"illegal move"<<result<<std::endl;
-			// }
 		}
 		return points;
 	}
@@ -329,6 +327,7 @@ protected:
 		stone[7][4] = piece_type::hollow;
 	}
 private:
+	std::bitset<81> forbid_[2];
 	grid stone;
 	data attr;
 };
